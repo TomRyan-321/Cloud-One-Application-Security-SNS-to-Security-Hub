@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: cloudone-application-security-sns-to-aws-securityhub
+    Description: >-
+      Serverless application to publish findings from Trend Micro's Cloud One Application Security to AWS Security Hub
+    Author: Tom Ryan
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels:
+      [trendmicro, cloudone, applicationsecurity, securityhub, findings, plugin]
+    HomePageUrl: https://github.com/TomRyan-321/Cloud-One-Application-Security-SNS-to-Security-Hub
+    SemanticVersion: 1.0.0
+    SourceCodeUrl: https://github.com/TomRyan-321/Cloud-One-Application-Security-SNS-to-Security-Hub
+
+Parameters:
+  ExternalID:
+    Type: String
+
+Resources:
+  C1AStoSecurityHubFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./src
+      Handler: handler.lambda_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 300
+      Tracing: Active
+      Policies:
+        - Statement:
+            - Sid: SecurityHubBatchImportFindingsPolicy
+              Effect: Allow
+              Action:
+                - securityhub:BatchImportFindings
+              Resource: "arn:aws:securityhub:*:*:*"
+      Events:
+        ScanResult:
+          Type: SNS
+          Properties:
+            Topic: !Ref C1AStoSecurityHubSNSTopic
+
+  C1AStoSecurityHubSNSTopic:
+    Type: AWS::SNS::Topic
+
+  CrossAccountIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::800880067056:root
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalID
+      ManagedPolicyArns:
+        - !Ref CrossAccountIAMPolicy
+  CrossAccountIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Permissions required for Cloud One Application Security to publish to SNS
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sns:Publish
+            Resource: !Ref C1AStoSecurityHubSNSTopic
+
+Outputs:
+  SNSTopicName:
+    Value: !GetAtt C1AStoSecurityHubSNSTopic.TopicName
+  IAMRoleName:
+    Value: !Ref CrossAccountIAMRole
+  AWSRegion:
+    Value: !Sub '${AWS::Region}'
+  AWSAccountID:
+    Value: !Sub '${AWS::AccountId}'
