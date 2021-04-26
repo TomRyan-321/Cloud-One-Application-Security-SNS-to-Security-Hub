@@ -18,7 +18,26 @@ Metadata:
 
 Parameters:
   ExternalID:
+    Description: External ID from Application Security console
+    Default: ""
     Type: String
+  UseExistingSNSTopic:
+    Description: 'Use existing SNS Topic or Create New. Allowed Values: "true" / "false"'
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "false"
+  ExistingSNSTopicARN:
+    Description: Optional, input the ARN of your existing Application Security SNS Topic or leave as None
+    Type: String
+    Default: "None"
+
+Conditions:
+  UseExistingTopic:
+    !Equals [true, !Ref UseExistingSNSTopic]
+  CreateTopicResources:
+    !Equals [false, !Ref UseExistingSNSTopic]
 
 Resources:
   C1AStoSecurityHubFunction:
@@ -41,13 +60,15 @@ Resources:
         ScanResult:
           Type: SNS
           Properties:
-            Topic: !Ref C1AStoSecurityHubSNSTopic
+            Topic: !If [UseExistingTopic, !Ref ExistingSNSTopicARN, !Ref C1AStoSecurityHubSNSTopic]
 
   C1AStoSecurityHubSNSTopic:
     Type: AWS::SNS::Topic
+    Condition: CreateTopicResources
 
   CrossAccountIAMRole:
     Type: AWS::IAM::Role
+    Condition: CreateTopicResources
     Properties:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
@@ -63,6 +84,7 @@ Resources:
         - !Ref CrossAccountIAMPolicy
   CrossAccountIAMPolicy:
     Type: AWS::IAM::ManagedPolicy
+    Condition: CreateTopicResources
     Properties:
       Description: Permissions required for Cloud One Application Security to publish to SNS
       PolicyDocument:
@@ -74,10 +96,16 @@ Resources:
 
 Outputs:
   SNSTopicName:
+    Condition: CreateTopicResources
     Value: !GetAtt C1AStoSecurityHubSNSTopic.TopicName
   IAMRoleName:
+    Condition: CreateTopicResources
     Value: !Ref CrossAccountIAMRole
   AWSRegion:
+    Condition: CreateTopicResources
     Value: !Sub '${AWS::Region}'
   AWSAccountID:
+    Condition: CreateTopicResources
     Value: !Sub '${AWS::AccountId}'
+  FunctionARN:
+    Value: !GetAtt C1AStoSecurityHubFunction.Arn
