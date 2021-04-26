@@ -9,7 +9,7 @@ This AWS SAM (Serverless Application Model) deployment configures the required r
 1. **Install AWS SAM CLI**
     - Visit [Installing the AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) for detailed instructions for your Operating System.
     - Configure your [AWS Credentials](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-getting-started-set-up-credentials.html) for use with AWS SAM CLI.
-2. **Configure Application Security SNS integration to obtain the external ID value**
+2. **Configure Application Security SNS integration to obtain the external ID value (If not previously configured)**
     - Access to the Cloud One - Application Security console with administrative privileges to create a new integration.
 
 ## Installation
